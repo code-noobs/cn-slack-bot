@@ -12,7 +12,7 @@ bot.on('start', () => {
 	icon_emoji: ':smiley:'
 	};
 
-	bot.postMessageToChannel('general', 'ITSWORKING.JPG', params);
+	bot.postMessageToChannel('bot-testing', "Don't panic", params);
 });
 
 // Error Handler
