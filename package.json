@@ -15,5 +15,11 @@
   "bugs": {
     "url": "https://github.com/code-noobs/cn-slack-bot/issues"
   },
-  "homepage": "https://github.com/code-noobs/cn-slack-bot#readme"
+  "homepage": "https://github.com/code-noobs/cn-slack-bot#readme",
+  "dependencies": {
+    "axios": "^0.18.0",
+    "https": "^1.0.0",
+    "querystring": "^0.2.0",
+    "slackbots": "^1.1.0"
+  }
 }
