@@ -6,6 +6,8 @@ const bot = new SlackBot({
 	name: 'Code Noobs Bot'
 });
 
+const dnsapi = 'https://dns-api.org/';
+
 // Start Handler
 bot.on('start', () => {
 	const params = {
@@ -29,20 +31,22 @@ bot.on('message', (data) => {
 
 // Respond to Data
 function handleMessage(message) {
-	if(message.includes(' lastfm')) {	
-	lastfmArtist();
+	if(message.includes(' dns')) {	
+	dnsLookup();
 	}
 }
 
-// Pull Last.FM artist information
-function lastfmArtist() {
-  axios.get('http://ws.audioscrobbler.com/2.0/?method=artist.getinfo&artist=prince&api_key=3cd4582d91ac24b7a041e998287b26d8&format=json').then(res => {
-    console.log(res.data.artist['name']);    
-    const artist = res.data.artist.name;
+// Pull dns-api.org information
+function dnsLookup() {
+  axios.get('dnsapi').then(res => {
+       
+	const dns = res.data;
+	console.log(dns); 
+
     const params = {
-      icon_emoji: ':musical_score:'
+      icon_emoji: ''
     };
 
-    bot.postMessageToChannel('bot-testing', artist, params);
+    bot.postMessageToChannel('bot-testing', dns, params);
   });
 }
