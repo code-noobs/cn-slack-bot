@@ -37,12 +37,19 @@ bot.on('message', (data) => {
 function handleMessage(message) {
     if(message.includes('\<\@')){
         // Take the data I want and re-organize for the API to use
+        // This should probably be it's own function
         var buf1 = Buffer.allocUnsafe(26);
         buf1 = message;
         buf2 = buf1.slice(13, buf1.length);
-        console.log(buf2.toString('ascii', 0, buf2.length));
-        message = buf2;
-        console.log(message);
+        message = buf2.toString('ascii', 0, buf2.length);
+        dnsLookup(message);
+        bot.postMessageToChannel('bots-testing', message);
+
+        // Select part of message to remove
+        // returns null
+        var regex = new RegExp(/^([<a-zA-Z:\/\/a-zA-Z\.a-zA-Z\|])\w+/);
+        var arrMatches = message.match(regex);
+        console.log(arrMatches);
     } else if(message.includes(' dns')) {
         
         
@@ -70,7 +77,7 @@ function dnsLookup(text) {
 
 // integrate whois API
 function whoisLookup(){
-var url = "https://www.whoisxmlapi.com/"
+var url = "https://www.includes.whoisxmlapi.com/"
     +"whoisserver/WhoisService?";
 var parameters = {
 		domainName: 'webbhost.net',
