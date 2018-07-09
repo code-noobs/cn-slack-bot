@@ -77,7 +77,7 @@ function dnsLookup(text) {
 
 // integrate whois API
 function whoisLookup(){
-var url = "https://www.includes.whoisxmlapi.com/"
+var url = "https://www.whoisxmlapi.com/"
     +"whoisserver/WhoisService?";
 var parameters = {
 		domainName: 'webbhost.net',
