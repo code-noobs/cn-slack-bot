@@ -4,11 +4,11 @@ const https = require('https');
 const querystring = require('querystring');
 
 const bot = new SlackBot({
-	token: 'xoxb-299068034276-394502308610-JdAWPgDv548gGU5ZsPAsnWzM',
+	token: 'YOUR_TOKEN',
 	name: 'Code Noobs Bot'
 });
 
-const dnsApi = 'https://dns-api.org/a/webbhost.net';
+const dnsApi = 'https://dns-api.org/';
 
 // Start Handler
 bot.on('start', () => {
@@ -25,9 +25,6 @@ bot.on('error', err => console.log(err));
 // Mesage Handler
 bot.on('message', (data) => {
 	if(data.type !== 'message'){
-	
-		
-		
 	return;
 	}
 	console.log(data);
@@ -38,19 +35,26 @@ bot.on('message', (data) => {
 
 // Respond to Data
 function handleMessage(message) {
-	if(message.includes(' dns')) {
-		
-		console.log(message);
-		dnsLookup();
+    if(message.includes('\<\@')){
+        // Take the data I want and re-organize for the API to use
+        var buf1 = Buffer.allocUnsafe(26);
+        buf1 = message;
+        buf2 = buf1.slice(13, buf1.length);
+        console.log(buf2.toString('ascii', 0, buf2.length));
+        message = buf2;
+        console.log(message);
+    } else if(message.includes(' dns')) {
+        
+        
 	} else if(message.includes(' whois')) {
 		whoisLookup();
 	}
 }
 
 // Pull dns-api.org information
-function dnsLookup() {
-  axios.get(dnsApi).then(res => {
-       
+function dnsLookup(text) {
+    axios.get(dnsApi+ text.name + '/' + text.type).then(res => {
+    
 	const dns = res.data;
 	
 
@@ -69,8 +73,8 @@ function whoisLookup(){
 var url = "https://www.whoisxmlapi.com/"
     +"whoisserver/WhoisService?";
 var parameters = {
-		domainName: 'google.com',
-		apiKey: 'at_eFYe3jSZXRIcAVywg2QKj9sbQjqzh',
+		domainName: 'webbhost.net',
+		apiKey: 'YOUR_API_KEY',
 		outputFormat: 'json'
 };
 url = url + querystring.stringify(parameters);
