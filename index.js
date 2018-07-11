@@ -4,7 +4,7 @@ const https = require('https');
 const querystring = require('querystring');
 
 const bot = new SlackBot({
-	token: 'YOUR_TOKEN',
+	token: 'YOUR_SLACK_TOKEN',
 	name: 'Code Noobs Bot'
 });
 
@@ -42,28 +42,35 @@ function handleMessage(message) {
         buf1 = message;
         buf2 = buf1.slice(13, buf1.length);
         message = buf2.toString('ascii', 0, buf2.length);
-        dnsLookup(message);
-        bot.postMessageToChannel('bots-testing', message);
-
+        console.log(message);
+        function dnsPath(message) {
+            var data = message.toString();
+            console.log(data);
+        }       
         // Select part of message to remove
         // returns null
-        var regex = new RegExp(/^([<a-zA-Z:\/\/a-zA-Z\.a-zA-Z\|])\w+/);
+        //returns input.. and stuff posted here: https://webbhost.slack.com/archives/CBLERPJCA/p1531193642000053
+        
+        var regex = new RegExp(/^([<a-zA-Z:\/\/a-zA-Z\.a-zA-Z\|>])\w+/);
         var arrMatches = message.match(regex);
         console.log(arrMatches);
-    } else if(message.includes(' dns')) {
+        message = arrMatches;
+        return message;
+        dnsLookup(message);
         
+    } else if(message.includes(' dns')) {
+        dnsLookup()
         
 	} else if(message.includes(' whois')) {
-		whoisLookup();
+		whoisLookup(message);
 	}
 }
 
 // Pull dns-api.org information
-function dnsLookup(text) {
-    axios.get(dnsApi+ text.name + '/' + text.type).then(res => {
+function dnsLookup() {
+    axios.get(dnsApi + '\/A' + '\/webbhost.net').then(res => {
     
 	const dns = res.data;
-	
 
 	console.log(dns); 
 
@@ -81,7 +88,7 @@ var url = "https://www.whoisxmlapi.com/"
     +"whoisserver/WhoisService?";
 var parameters = {
 		domainName: 'webbhost.net',
-		apiKey: 'YOUR_API_KEY',
+		apiKey: 'YOUR_WHOIS_API_KEY',
 		outputFormat: 'json'
 };
 url = url + querystring.stringify(parameters);
