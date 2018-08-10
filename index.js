@@ -6,13 +6,14 @@ const env = require('dotenv');
 env.config({path: 
         '.env'});
 const bot = new SlackBot({
-	token: process.env.SLACK_API_TOKEN,
+	token: 'YOUR_SLACK_TOKEN',
 	name: 'Code Noobs Bot'
 });
 
 const dnsApi = 'https://dns-api.org/';
 
 // Start Handler
+function onSlackEvent(event, cb) 
 bot.on('start', () => {
 	const params = {
 	icon_emoji: ':wave:'
