@@ -3,7 +3,48 @@
 Tracking what changed in `index.js` / `package.json` for the security pass, and
 what's deliberately left for a follow-up so nothing gets lost.
 
-## Fixed in this pass
+## Round 2 — backed off third-party API reliance entirely
+
+Per follow-up direction to reduce reliance on external APIs (smaller surface,
+fewer secrets, fewer trust dependencies), both lookups now run locally instead
+of calling third-party HTTP services:
+
+- **DNS**: replaced `axios.get(dns-api.org/...)` with Node's built-in
+  `dns.promises.resolve{Ns,4,Cname,Mx,Txt}`. No outbound HTTP, no third party
+  in the loop, structured results instead of text-scraping. `axios` is now an
+  unused dependency and has been removed entirely (`package.json` +
+  regenerated lockfile) — that also drops the last advisories that weren't
+  already covered by the `slackbots`/`request` chain noted below.
+- **WHOIS**: replaced the `whoisxmlapi.com` HTTP+API-key integration with a
+  ~70-line raw WHOIS protocol client (`queryWhoisServer`/`lookupWhois` in
+  `index.js`) built on the built-in `net` module — RFC 3912 is just
+  "open a TCP socket to port 43, send `<query>\r\n`, read until close".
+  This removes the `WHOIS_API_KEY` secret from the picture entirely (one less
+  credential to provision, store, leak, or rotate) along with `https` and
+  `querystring`.
+  - **Referral handling / SSRF note**: WHOIS lookups work by asking
+    `whois.iana.org` which registry is authoritative for a TLD, then querying
+    that registry directly — the registry hostname comes from a `refer:` line
+    in IANA's response. To make sure a compromised/spoofed referral can't be
+    used to redirect our outbound TCP connection to an arbitrary internal
+    host, `extractReferral()` validates the referral against the same
+    `DOMAIN_PATTERN` used for user input before connecting to it — this
+    rejects IP literals (the pattern requires an alphabetic TLD) and anything
+    with whitespace/control characters. The port is hardcoded to 43.
+  - Response size is capped (`WHOIS_MAX_BYTES`, 100 KB) and the Slack reply is
+    truncated (`WHOIS_REPLY_LIMIT`, 3000 chars) so a verbose/malicious WHOIS
+    server can't be used to flood the channel or exhaust memory.
+  - **Operational note**: this needs outbound TCP connectivity on port 43 from
+    wherever the bot runs (raw sockets, not HTTP — different egress rules than
+    the old HTTPS-only setup). Confirm the deploy host allows it; this sandbox
+    didn't, so the client couldn't be live-tested end-to-end here, only
+    code-reviewed and unit-checked against the protocol spec. The `dns`-based
+    lookup *was* exercised live and returned real records.
+- README updated with a short pointer to this doc so the "Stack"/"What it did"
+  sections (which now describe the original 2018 implementation, not the
+  current one) aren't read as current.
+
+## Fixed in round 1
 
 - **Rewrote message parsing** (`index.js`): replaced the manual
   `Buffer.allocUnsafe` + `slice`/`indexOf`/`substr` chain (which threw on any
@@ -11,12 +52,17 @@ what's deliberately left for a follow-up so nothing gets lost.
   loop pm2 was band-aiding) with a single regex (`COMMAND_PATTERN`) that
   validates the `<@USERID> dns|whois <domain>` shape up front, plus a
   `DOMAIN_PATTERN` check on the extracted value before it's ever used.
-- **Stopped building API URLs from raw, unvalidated message text.** The
-  extracted value is now validated against a hostname pattern and
-  `encodeURIComponent`-ed before being concatenated into the dns-api.org URL.
+- **Stopped building lookups from raw, unvalidated message text.** The
+  extracted value is validated against a hostname pattern (`DOMAIN_PATTERN`)
+  before it's used anywhere — originally this guarded URL construction; after
+  round 2 (below) it also doubles as the guard against WHOIS protocol
+  injection and SSRF-via-referral, and against `dns.resolve*` being called
+  with garbage.
 - **Added a per-user rate limit** (`isRateLimited`, 5 lookups/minute/user) so
-  a single chatty (or malicious) user can't burn through the billed WHOIS API
-  quota or hammer dns-api.org through the bot.
+  a single chatty (or malicious) user can't flood the channel or hammer
+  upstream DNS/WHOIS infrastructure through the bot. (Originally written to
+  guard a billed third-party API quota; still useful as a general flood guard
+  now that lookups run locally.)
 - **Sanitize everything relayed back into Slack** (`sanitizeForSlack`):
   escapes `&`/`<`/`>` and breaks up `@channel`/`@here`/`@everyone` tokens with
   a zero-width space, so attacker-influenceable third-party data (WHOIS
@@ -33,14 +79,21 @@ what's deliberately left for a follow-up so nothing gets lost.
 
 ## Deliberately scoped out — capture for follow-up
 
-- **Dropped `registrant.rawText` / `administrativeContact.rawText` from the
-  WHOIS reply.** These are large free-text blobs containing registrants' PII
-  (names, addresses, phone numbers) and are the parts of a WHOIS record an
-  attacker has the most control over (anyone can register a domain with
-  arbitrary text in those fields, then ask the bot to look it up). Posting a
-  structured summary instead removes both the PII-exposure and
-  trusted-relay-injection angles. If the raw text is actually wanted back,
-  it needs much stronger sanitization/truncation than a one-line escape.
+- **WHOIS output is now raw-text-relayed (truncated + escaped), not
+  field-summarized — re-evaluate the PII tradeoff.** Round 1 deliberately
+  dropped `registrant`/`administrativeContact` free-text fields from the old
+  JSON API to avoid relaying PII and attacker-influenceable content. Round 2's
+  swap to direct WHOIS-protocol queries returns *only* raw registry text (no
+  structured JSON to summarize from), so the bot now posts a sanitized,
+  size-capped excerpt of whatever the registry returns — which inherently
+  includes registrant contact info for registries that don't redact it
+  (many gTLD registries do redact for privacy; ccTLD registries vary widely).
+  `sanitizeForSlack` neutralizes Slack-injection risk, and the byte/char caps
+  bound flooding, but **PII exposure in the relayed text is back on the table**
+  and depends entirely on what the authoritative registry chooses to publish.
+  Worth a follow-up decision: is a raw (capped) excerpt acceptable, or should
+  the bot regex-strip common PII-bearing lines (address/phone/email) before
+  posting, at the cost of being less complete and more registry-format-fragile?
 - **`slackbots` itself is the remaining dependency risk.** It's unmaintained
   and pulls in the deprecated `request` → `form-data`/`tough-cookie`/`uuid`/`qs`
   chain, which has open advisories with **no fix available** (`npm audit`

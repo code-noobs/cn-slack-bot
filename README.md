@@ -4,6 +4,14 @@
 
 Inspired by [Brad Traversy's slack_jokebot tutorial](https://github.com/bradtraversy/slack_jokebot/). Built over a month in summer 2018 as a first foray into bots and external APIs.
 
+> **2026 update:** following a security review, the bot no longer calls
+> dns-api.org or whoisxmlapi.com. DNS lookups now use Node's built-in `dns`
+> resolver and WHOIS lookups speak the WHOIS protocol directly over a raw TCP
+> socket (`net`) — both run locally with no third-party HTTP API, no API key,
+> and no `axios` dependency. See `SECURITY_NOTES.md` for the full rundown of
+> what changed and why. The table and stack below describe the original
+> 2018 implementation for posterity.
+
 ---
 
 ## What it did
